@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Game Hứng Bia Retro</title>
     <style>
+        * { box-sizing: border-box; }
         body {
             margin: 0;
             background-color: #1a4a1a;
@@ -12,6 +13,7 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            height: 100dvh;
             color: white;
             font-family: 'Arial', sans-serif;
             overflow: hidden;
@@ -22,21 +24,27 @@
             display: flex;
             border: 5px solid #d4af37;
             background-color: #006400;
+            max-width: 100vw;
+            max-height: 100vh;
+            max-height: 100dvh;
         }
 
         canvas {
             background-color: #0b3d0b;
             cursor: none;
+            display: block;
         }
 
         #sidebar {
             width: 250px;
+            min-width: 180px;
             padding: 20px;
             display: flex;
             flex-direction: column;
             align-items: center;
             border-left: 5px solid #d4af37;
             background-color: #052505;
+            overflow-y: auto;
         }
 
         .char-box {
@@ -66,12 +74,66 @@
             font-size: 14px;
             color: #aaa;
         }
+
+        /* Tablet */
+        @media (max-width: 900px) {
+            #sidebar {
+                width: 200px;
+                min-width: 150px;
+                padding: 15px;
+            }
+            .char-img {
+                width: 140px;
+                height: 240px;
+            }
+            #score-board { font-size: 20px; }
+        }
+
+        /* Mobile landscape & small tablet */
+        @media (max-width: 700px) {
+            #game-container {
+                flex-direction: column;
+                border-width: 3px;
+            }
+            #sidebar {
+                width: 100%;
+                min-width: unset;
+                flex-direction: row;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
+                border-left: none;
+                border-top: 3px solid #d4af37;
+                padding: 10px;
+            }
+            .char-box {
+                margin-bottom: 0;
+            }
+            .char-img {
+                width: 80px;
+                height: 130px;
+            }
+            #score-board {
+                font-size: 18px;
+                margin-bottom: 0;
+            }
+            .status-text { font-size: 12px; }
+            #sidebar > div:last-child { font-size: 11px; }
+        }
+
+        /* Very small mobile */
+        @media (max-width: 400px) {
+            #game-container { border-width: 2px; }
+            #sidebar { padding: 6px; gap: 6px; }
+            .char-img { width: 60px; height: 100px; }
+            #score-board { font-size: 16px; }
+        }
     </style>
 </head>
 <body>
 
 <div id="game-container">
-    <canvas id="gameCanvas" width="500" height="600"></canvas>
+    <canvas id="gameCanvas"></canvas>
 
     <div id="sidebar">
         <div id="score-board">ĐIỂM: 0</div>
@@ -94,8 +156,15 @@
     const scoreElement = document.getElementById('score-board');
     const charElement = document.getElementById('character');
     const levelText = document.getElementById('level-text');
+    const gameContainer = document.getElementById('game-container');
+
+    // Base (design) resolution
+    const BASE_W = 500;
+    const BASE_H = 600;
+    let scaleFactor = 1;
 
     let score = 0;
+    // Game logic works in base coordinates
     let basket = { x: 200, y: 500, width: 200, height: 100 };
     let beers = [];
     let gameActive = true;
@@ -114,16 +183,73 @@
         { score: 100, img: './image/body_4.png', text: 'Cấp độ: 4!' }
     ];
 
+    function resizeCanvas() {
+        const isMobile = window.innerWidth <= 700;
+        const borderSize = window.innerWidth <= 400 ? 2 : (isMobile ? 3 : 5);
+        const sidebarBorder = borderSize;
+
+        let availW, availH;
+
+        if (isMobile) {
+            // Column layout: canvas on top, sidebar below
+            const sidebarH = Math.min(160, window.innerHeight * 0.25);
+            availW = window.innerWidth - borderSize * 2;
+            availH = window.innerHeight - sidebarH - borderSize * 2 - sidebarBorder;
+        } else {
+            // Row layout: canvas left, sidebar right
+            const sidebar = document.getElementById('sidebar');
+            const sidebarW = window.innerWidth <= 900 ? 200 : 250;
+            availW = window.innerWidth - sidebarW - borderSize * 2 - sidebarBorder;
+            availH = window.innerHeight - borderSize * 2;
+        }
+
+        // Maintain aspect ratio (5:6)
+        const aspect = BASE_W / BASE_H;
+        let cw = availW;
+        let ch = cw / aspect;
+        if (ch > availH) {
+            ch = availH;
+            cw = ch * aspect;
+        }
+
+        cw = Math.floor(Math.max(cw, 200));
+        ch = Math.floor(Math.max(ch, 240));
+
+        canvas.width = cw;
+        canvas.height = ch;
+        scaleFactor = cw / BASE_W;
+
+        // Recalculate basket Y position in base coords
+        basket.y = BASE_H - 100;
+    }
+
     // Theo dõi chuột
     canvas.addEventListener('mousemove', (e) => {
         let rect = canvas.getBoundingClientRect();
-        basket.x = e.clientX - rect.left - basket.width / 2;
+        let mouseX = e.clientX - rect.left;
+        // Convert screen coords to base coords
+        basket.x = mouseX / scaleFactor - basket.width / 2;
     });
+
+    // Hỗ trợ cảm ứng (mobile)
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        let rect = canvas.getBoundingClientRect();
+        let touchX = e.touches[0].clientX - rect.left;
+        basket.x = touchX / scaleFactor - basket.width / 2;
+    }, { passive: false });
+
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        let rect = canvas.getBoundingClientRect();
+        let touchX = e.touches[0].clientX - rect.left;
+        basket.x = touchX / scaleFactor - basket.width / 2;
+    }, { passive: false });
 
     function createBeer() {
         if (Math.random() < 0.03) {
             beers.push({
-                x: Math.random() * (canvas.width - 30),
+                x: Math.random() * (BASE_W - 30),
                 y: 0,
                 speed: 3 + Math.random() * 3,
                 size: 30
@@ -139,7 +265,7 @@
         beers = beers.filter(beer => {
             beer.y += beer.speed;
 
-            // Kiểm tra va chạm với giỏ
+            // Kiểm tra va chạm với giỏ (base coords)
             if (beer.y + beer.size > basket.y && 
                 beer.x + 20 > basket.x && 
                 beer.x < basket.x + basket.width) {
@@ -149,7 +275,7 @@
             }
 
             // Xóa bia nếu rơi quá màn hình
-            if (beer.y > canvas.height) {
+            if (beer.y > BASE_H) {
                 return false;
             }
 
@@ -172,12 +298,14 @@
     function draw() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Vẽ cái giỏ (mặt người)
-        ctx.drawImage(faceImg, basket.x, basket.y, basket.width, basket.height);
+        const s = scaleFactor;
+
+        // Vẽ cái giỏ (mặt người) - scale from base coords
+        ctx.drawImage(faceImg, basket.x * s, basket.y * s, basket.width * s, basket.height * s);
 
         // Vẽ các lon bia
         beers.forEach(beer => {
-            ctx.drawImage(biaImg, beer.x, beer.y, 40, 50);
+            ctx.drawImage(biaImg, beer.x * s, beer.y * s, 40 * s, 50 * s);
         });
 
         requestAnimationFrame(() => {
@@ -186,11 +314,18 @@
         });
     }
 
+    // Resize on load and on window change
+    window.addEventListener('resize', resizeCanvas);
+    window.addEventListener('orientationchange', () => setTimeout(resizeCanvas, 100));
+
     // Đợi ảnh tải xong rồi mới bắt đầu game
     Promise.all([
         new Promise(resolve => { faceImg.onload = resolve; faceImg.onerror = resolve; }),
         new Promise(resolve => { biaImg.onload = resolve; biaImg.onerror = resolve; })
-    ]).then(() => draw());
+    ]).then(() => {
+        resizeCanvas();
+        draw();
+    });
 </script>
 
 </body>
