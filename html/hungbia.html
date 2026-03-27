@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Hứng Bia Retro</title>
+    <style>
+        body {
+            margin: 0;
+            background-color: #1a4a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+
+        #game-container {
+            position: relative;
+            display: flex;
+            border: 5px solid #d4af37;
+            background-color: #006400;
+        }
+
+        canvas {
+            background-color: #0b3d0b;
+            cursor: none;
+        }
+
+        #sidebar {
+            width: 250px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            border-left: 5px solid #d4af37;
+            background-color: #052505;
+        }
+
+        .char-box {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .char-img {
+            width: 180px;
+            height: 300px;
+            border: 2px solid white;
+            background-size: contain;
+            background-position: center;
+            background-repeat: no-repeat;
+            margin: 0 auto 10px auto;
+            transition: all 0.5s ease;
+        }
+
+        #score-board {
+            font-size: 24px;
+            color: #ffff00;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .status-text {
+            font-size: 14px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="500" height="600"></canvas>
+
+    <div id="sidebar">
+        <div id="score-board">ĐIỂM: 0</div>
+        
+        <div class="char-box">
+            <div id="character" class="char-img" style="background-image: url('../image/face.png');"></div>
+            <div id="level-text" class="status-text">Cấp độ: Đang mặc đồ</div>
+        </div>
+
+        <div style="font-size: 12px; text-align: center;">
+            <p>Di chuyển chuột để hứng bia</p>
+            <p>Hứng đủ bia để "cởi đồ"!</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score-board');
+    const charElement = document.getElementById('character');
+    const levelText = document.getElementById('level-text');
+
+    let score = 0;
+    let basket = { x: 200, y: 500, width: 200, height: 100 };
+    let beers = [];
+    let gameActive = true;
+
+    // Load hình ảnh
+    const faceImg = new Image();
+    faceImg.src = '../image/face.png';
+    const biaImg = new Image();
+    biaImg.src = '../image/bia.png';
+    // Danh sách các cấp độ ảnh
+    const levels = [
+        { score: 0, img: '../image/face.png', text: 'Cấp độ: Đang mặc đồ' },
+        { score: 10, img: '../image/face_3.png', text: 'Cấp độ: Đã cởi áo' },
+        { score: 20, img: '../image/face.png', text: 'Cấp độ: Đã cởi quần' },
+        { score: 30, img: '../image/face.png', text: 'Cấp độ: Hoàn thành!' }
+    ];
+
+    // Theo dõi chuột
+    canvas.addEventListener('mousemove', (e) => {
+        let rect = canvas.getBoundingClientRect();
+        basket.x = e.clientX - rect.left - basket.width / 2;
+    });
+
+    function createBeer() {
+        if (Math.random() < 0.03) {
+            beers.push({
+                x: Math.random() * (canvas.width - 30),
+                y: 0,
+                speed: 3 + Math.random() * 3,
+                size: 30
+            });
+        }
+    }
+
+    function update() {
+        if (!gameActive) return;
+
+        createBeer();
+
+        beers = beers.filter(beer => {
+            beer.y += beer.speed;
+
+            // Kiểm tra va chạm với giỏ
+            if (beer.y + beer.size > basket.y && 
+                beer.x + 20 > basket.x && 
+                beer.x < basket.x + basket.width) {
+                score++;
+                updateProgress();
+                return false;
+            }
+
+            // Xóa bia nếu rơi quá màn hình
+            if (beer.y > canvas.height) {
+                return false;
+            }
+
+            return true;
+        });
+    }
+
+    function updateProgress() {
+        scoreElement.innerText = `ĐIỂM: ${score}`;
+        
+        // Kiểm tra thay đổi ảnh nhân vật dựa trên điểm số
+        levels.forEach(lvl => {
+            if (score >= lvl.score) {
+                charElement.style.backgroundImage = `url('${lvl.img}')`;
+                levelText.innerText = lvl.text;
+            }
+        });
+    }
+
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Vẽ cái giỏ (mặt người)
+        ctx.drawImage(faceImg, basket.x, basket.y, basket.width, basket.height);
+
+        // Vẽ các lon bia
+        beers.forEach(beer => {
+            ctx.drawImage(biaImg, beer.x, beer.y, 40, 50);
+        });
+
+        requestAnimationFrame(() => {
+            update();
+            draw();
+        });
+    }
+
+    draw();
+</script>
+
+</body>
+</html>
