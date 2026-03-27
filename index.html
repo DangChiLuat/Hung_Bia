@@ -77,7 +77,7 @@
         <div id="score-board">ĐIỂM: 0</div>
         
         <div class="char-box">
-            <div id="character" class="char-img" style="background-image: url('../image/face.png');"></div>
+            <div id="character" class="char-img" style="background-image: url('./image/face.png');"></div>
             <div id="level-text" class="status-text">Cấp độ: Đang mặc đồ</div>
         </div>
 
@@ -102,15 +102,15 @@
 
     // Load hình ảnh
     const faceImg = new Image();
-    faceImg.src = '../image/face.png';
+    faceImg.src = './image/face.png';
     const biaImg = new Image();
-    biaImg.src = '../image/bia.png';
+    biaImg.src = './image/bia.png';
     // Danh sách các cấp độ ảnh
     const levels = [
-        { score: 20, img: '../image/body_1.png', text: 'Cấp độ: 1' },
-        { score: 50, img: '../image/body_2.png', text: 'Cấp độ: 2' },
-        { score: 70, img: '../image/body_3.png', text: 'Cấp độ: 3' },
-        { score: 100, img: '../image/body_4.png', text: 'Cấp độ: 4!' }
+        { score: 20, img: './image/body_1.png', text: 'Cấp độ: 1' },
+        { score: 50, img: './image/body_2.png', text: 'Cấp độ: 2' },
+        { score: 70, img: './image/body_3.png', text: 'Cấp độ: 3' },
+        { score: 100, img: './image/body_4.png', text: 'Cấp độ: 4!' }
     ];
 
     // Theo dõi chuột
@@ -185,7 +185,11 @@
         });
     }
 
-    draw();
+    // Đợi ảnh tải xong rồi mới bắt đầu game
+    Promise.all([
+        new Promise(resolve => { faceImg.onload = resolve; faceImg.onerror = resolve; }),
+        new Promise(resolve => { biaImg.onload = resolve; biaImg.onerror = resolve; })
+    ]).then(() => draw());
 </script>
 
 </body>
